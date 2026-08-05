@@ -73,23 +73,33 @@ async function upsertToSupabase(rows) {
     return;
   }
 
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/updates`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      "Content-Type": "application/json",
-      Prefer: "resolution=merge-duplicates", // upsert on primary key (id)
-    },
-    body: JSON.stringify(rows),
-  });
+  // Inserting one row per request (instead of one batch request for all
+  // rows) trades a bit of speed for reliability: a single command with
+  // multiple rows sharing a conflict key fails entirely, whereas one-at-a-
+  // time upserts let every other row succeed even if one is malformed or
+  // duplicated, and the per-row error tells us exactly which id failed.
+  let successCount = 0;
+  for (const row of rows) {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/updates`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates",
+      },
+      body: JSON.stringify(row),
+    });
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Supabase upsert failed: ${response.status} ${text}`);
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(`Failed to upsert row "${row.id}": ${response.status} ${text}`);
+      continue;
+    }
+    successCount++;
   }
 
-  console.log(`Upserted ${rows.length} case law entries.`);
+  console.log(`Upserted ${successCount} of ${rows.length} case law entries.`);
 }
 
 async function main() {
