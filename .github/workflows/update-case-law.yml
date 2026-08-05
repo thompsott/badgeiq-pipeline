@@ -1,0 +1,21 @@
+name: Update Case Law
+
+on:
+  schedule:
+    # Runs daily at 13:00 UTC. Cron syntax: minute hour day month weekday.
+    - cron: "0 13 * * *"
+  workflow_dispatch: # lets you trigger it manually from the Actions tab
+
+jobs:
+  fetch-and-upsert:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Fetch case law and update Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/fetch-case-law.js
