@@ -84,7 +84,12 @@ function mapToUpdateRow(caseResult) {
     type: "CASE RULING",
     title: caseResult.caseName || "Untitled Opinion",
     date: formattedDate,
-    summary: (caseResult.snippet || "New opinion — no summary text available from source.").slice(0, 400),
+    summary: (
+      caseResult.snippet ||
+      caseResult.syllabus ||
+      caseResult.procedural_history ||
+      "New opinion — no summary text available from source."
+    ).slice(0, 400),
     impact:
       "Auto-imported from CourtListener — impact analysis not yet reviewed. Read the full opinion before relying on this for field guidance.",
     action:
