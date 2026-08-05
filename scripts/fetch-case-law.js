@@ -45,6 +45,29 @@ async function fetchCaseLaw() {
 // state — mirroring how your bundled U.S. Supreme cases already work
 // (shown regardless of selected state). Adjust `state` here if you later
 // want to route specific circuits to specific states.
+// CourtListener's v4 search API doesn't consistently expose a plain "id"
+// field on opinion search results — it varies by result type (cluster_id,
+// docket_id, or an id nested under a different key). Trying several known
+// candidates and falling back to a slug built from the case name + date
+// means we always get *something* usable, and returning null lets the
+// caller skip the row entirely rather than writing a broken "cl-undefined"
+// id that silently overwrites every other row sharing that same id.
+function extractCaseId(caseResult) {
+  const candidate =
+    caseResult.id ?? caseResult.cluster_id ?? caseResult.docket_id ?? caseResult.opinion_id;
+  if (candidate !== undefined && candidate !== null) return `cl-${candidate}`;
+
+  if (caseResult.caseName && caseResult.dateFiled) {
+    const slug = caseResult.caseName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+    return `cl-${slug}-${caseResult.dateFiled}`;
+  }
+
+  return null;
+}
+
 function mapToUpdateRow(caseResult) {
   const dateFiled = caseResult.dateFiled ? new Date(caseResult.dateFiled) : new Date();
   const formattedDate = dateFiled.toLocaleDateString("en-US", {
@@ -53,8 +76,11 @@ function mapToUpdateRow(caseResult) {
     year: "numeric",
   });
 
+  const id = extractCaseId(caseResult);
+  if (!id) return null; // caller filters these out
+
   return {
-    id: `cl-${caseResult.id}`,
+    id,
     state: "Federal",
     type: "CASE RULING",
     title: caseResult.caseName || "Untitled Opinion",
@@ -107,7 +133,8 @@ async function main() {
     throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables.");
   }
   const cases = await fetchCaseLaw();
-  const mappedRows = cases.map(mapToUpdateRow);
+  if (cases.length > 0) console.log("Sample result keys:", Object.keys(cases[0]));
+  const mappedRows = cases.map(mapToUpdateRow).filter((row) => row !== null);
 
   // CourtListener can return the same opinion more than once in a single
   // search response — Supabase's upsert fails if a batch contains two rows
