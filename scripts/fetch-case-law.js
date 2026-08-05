@@ -91,9 +91,13 @@ function mapToUpdateRow(caseResult) {
       "New opinion — no summary text available from source."
     ).slice(0, 400),
     impact:
-      "Auto-imported from CourtListener — impact analysis not yet reviewed. Read the full opinion before relying on this for field guidance.",
-    action:
-      "Flagged for review: confirm this ruling's relevance and add specific guidance before treating as operational.",
+      // Facts (title, date, court, summary) are safe to auto-publish as-is.
+    // "What this means for you" is legal interpretation, not a fact — left
+    // honest and unfabricated here rather than auto-generated, so the
+    // content stays defensible for a buyer's legal review rather than
+    // quietly presenting invented guidance as reviewed advice.
+    impact: "Not yet interpreted for field impact. Read the full opinion linked above for details.",
+    action: "No agency-specific guidance yet — informational only.",
   };
 }
 
