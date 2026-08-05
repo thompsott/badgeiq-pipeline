@@ -97,7 +97,19 @@ async function main() {
     throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables.");
   }
   const cases = await fetchCaseLaw();
-  const rows = cases.map(mapToUpdateRow);
+  const mappedRows = cases.map(mapToUpdateRow);
+
+  // CourtListener can return the same opinion more than once in a single
+  // search response — Supabase's upsert fails if a batch contains two rows
+  // with the same primary key, so dedupe by id before sending, keeping
+  // the first occurrence of each.
+  const seenIds = new Set();
+  const rows = mappedRows.filter((row) => {
+    if (seenIds.has(row.id)) return false;
+    seenIds.add(row.id);
+    return true;
+  });
+
   await upsertToSupabase(rows);
 }
 
