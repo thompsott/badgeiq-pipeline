@@ -45,17 +45,16 @@ async function fetchCaseLaw() {
 // state — mirroring how your bundled U.S. Supreme cases already work
 // (shown regardless of selected state). Adjust `state` here if you later
 // want to route specific circuits to specific states.
-// CourtListener's v4 search API doesn't consistently expose a plain "id"
-// field on opinion search results — it varies by result type (cluster_id,
-// docket_id, or an id nested under a different key). Trying several known
-// candidates and falling back to a slug built from the case name + date
-// means we always get *something* usable, and returning null lets the
-// caller skip the row entirely rather than writing a broken "cl-undefined"
-// id that silently overwrites every other row sharing that same id.
+// Confirmed via a live run: CourtListener's v4 search API has no plain
+// "id" field on opinion cluster results — the real identifier is
+// `cluster_id`. Falls back to a name+date slug on the rare chance a
+// result is missing it, and returns null (rather than a broken
+// "cl-undefined" id) so the caller can skip that row entirely instead of
+// silently overwriting every other row sharing the same bad id.
 function extractCaseId(caseResult) {
-  const candidate =
-    caseResult.id ?? caseResult.cluster_id ?? caseResult.docket_id ?? caseResult.opinion_id;
-  if (candidate !== undefined && candidate !== null) return `cl-${candidate}`;
+  if (caseResult.cluster_id !== undefined && caseResult.cluster_id !== null) {
+    return `cl-${caseResult.cluster_id}`;
+  }
 
   if (caseResult.caseName && caseResult.dateFiled) {
     const slug = caseResult.caseName
@@ -133,7 +132,6 @@ async function main() {
     throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables.");
   }
   const cases = await fetchCaseLaw();
-  if (cases.length > 0) console.log("Sample result keys:", Object.keys(cases[0]));
   const mappedRows = cases.map(mapToUpdateRow).filter((row) => row !== null);
 
   // CourtListener can return the same opinion more than once in a single
