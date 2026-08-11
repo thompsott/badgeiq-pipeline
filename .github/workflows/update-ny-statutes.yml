@@ -1,0 +1,21 @@
+name: Update NY Statutes
+
+on:
+  schedule:
+    - cron: "0 14 * * 1" # weekly, Mondays — statutes change far less often than case law
+  workflow_dispatch:
+
+jobs:
+  fetch-and-upsert:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Fetch NY statutes and update Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NY_SENATE_API_KEY: ${{ secrets.NY_SENATE_API_KEY }}
+        run: node scripts/fetch-ny-statutes.js
