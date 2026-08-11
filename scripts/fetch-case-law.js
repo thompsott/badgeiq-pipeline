@@ -97,11 +97,6 @@ async function fetchCaseLaw() {
   return data.results || [];
 }
 
-// CourtListener results aren't state-specific by default (most are
-// federal), so these land in a nationwide bucket rather than a specific
-// state — mirroring how your bundled U.S. Supreme cases already work
-// (shown regardless of selected state). Adjust `state` here if you later
-// want to route specific circuits to specific states.
 // Confirmed via a live run: CourtListener's v4 search API has no plain
 // "id" field on opinion cluster results — the real identifier is
 // `cluster_id`. Falls back to a name+date slug on the rare chance a
@@ -148,9 +143,15 @@ function mapToUpdateRow(caseResult) {
       "New opinion — no summary text available from source."
     ).slice(0, 400),
     impact: "Not yet interpreted for field impact. Read the full opinion linked above for details.",
-    action: "No agency-specific guidance yet — informational only.",
+action: "No agency-specific guidance yet — informational only.",
   };
 }
+
+async function upsertToSupabase(rows) {
+  if (rows.length === 0) {
+    console.log("No new case law found this run.");
+    return;
+  }
 
   // Inserting one row per request (instead of one batch request for all
   // rows) trades a bit of speed for reliability: a single command with
