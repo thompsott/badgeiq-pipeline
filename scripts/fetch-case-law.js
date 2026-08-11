@@ -9,15 +9,42 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // Search terms tuned toward law-enforcement-relevant Fourth/Fifth Amendment
 // topics. CourtListener's search API treats this as a full-text query
 // across opinion text — adjust freely as you learn what's noisy vs useful.
-const SEARCH_QUERY = "fourth amendment search seizure OR fifth amendment miranda OR qualified immunity";
-const COURT_LISTENER_URL = `https://www.courtlistener.com/api/rest/v4/search/?q=${encodeURIComponent(
-  SEARCH_QUERY
-)}&type=o&order_by=dateFiled+desc&filed_after=${getDateDaysAgo(14)}`;
+// Multiple targeted queries instead of one broad one — surfaces a more
+// varied mix of case types (not just Fourth/Fifth Amendment) and gives
+// state courts more chances to show up alongside federal ones.
+const SEARCH_QUERIES = [
+  "fourth amendment search seizure",
+  "fifth amendment miranda interrogation",
+  "qualified immunity excessive force",
+  "vehicle search automobile exception",
+  "domestic violence warrantless arrest",
+];
+
+// 30 days instead of 14 — roughly doubles the pool of eligible opinions
+// per query without going so wide that results get stale/irrelevant.
+const SEARCH_WINDOW_DAYS = 30;
+
+// How many pages of results to pull per query. CourtListener returns ~20
+// results per page — 3 pages per query, across 5 queries, is up to ~300
+// candidate results per run before dedup, a meaningful jump from the
+// previous single-page/single-query limit of ~20.
+const MAX_PAGES_PER_QUERY = 3;
 
 function getDateDaysAgo(days) {
   const d = new Date();
   d.setDate(d.getDate() - days);
   return d.toISOString().split("T")[0];
+}
+
+function buildSearchUrl(query, page) {
+  const params = new URLSearchParams({
+    q: query,
+    type: "o",
+    order_by: "dateFiled desc",
+    filed_after: getDateDaysAgo(SEARCH_WINDOW_DAYS),
+    page: String(page),
+  });
+  return `https://www.courtlistener.com/api/rest/v4/search/?${params.toString()}`;
 }
 
 // Maps CourtListener's court_id prefixes to the exact state names your app
@@ -86,15 +113,33 @@ function resolveState(caseResult) {
   return STATE_COURT_PREFIXES[courtId] || "Federal";
 }
 
-async function fetchCaseLaw() {
-  const response = await fetch(COURT_LISTENER_URL, {
+async function fetchCaseLawPage(query, page) {
+  const response = await fetch(buildSearchUrl(query, page), {
     headers: { "User-Agent": "BadgeIQ-Pipeline/1.0" },
   });
   if (!response.ok) {
-    throw new Error(`CourtListener request failed: ${response.status}`);
+    console.error(`CourtListener request failed (query="${query}", page=${page}): ${response.status}`);
+    return [];
   }
   const data = await response.json();
   return data.results || [];
+}
+
+// Runs every search query across up to MAX_PAGES_PER_QUERY pages each,
+// stopping early for a query once a page comes back empty (no more
+// results left for that query). Failures on one query/page are logged
+// and skipped rather than aborting the whole run — a single bad request
+// shouldn't cost every other query's results too.
+async function fetchCaseLaw() {
+  const allResults = [];
+  for (const query of SEARCH_QUERIES) {
+    for (let page = 1; page <= MAX_PAGES_PER_QUERY; page++) {
+      const pageResults = await fetchCaseLawPage(query, page);
+      if (pageResults.length === 0) break;
+      allResults.push(...pageResults);
+    }
+  }
+  return allResults;
 }
 
 // Confirmed via a live run: CourtListener's v4 search API has no plain
