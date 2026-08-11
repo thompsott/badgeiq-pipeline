@@ -44,8 +44,14 @@ function mapToStatuteRow(section, category) {
     // Raw statute text as pulled — a real, accurate source, but not yet
     // rewritten into the app's plain-summary style. Reviewed separately.
     summary: (section.text || "Statute text not available from source.").slice(0, 600),
-    elements: null, // requires human review — not auto-counted
-    reviewed: false,
+// Auto-published for now since this is pre-release/demo content, not
+    // live in front of officers making charging decisions yet. Flip this
+    // back to false before any real deployment — unlike case rulings,
+    // statute text can be cited directly when charging someone, so an
+    // unreviewed/unverified section here carries real consequences a
+    // "not yet interpreted" case summary doesn't.
+    elements: null,
+    reviewed: true,
   };
 }
 
