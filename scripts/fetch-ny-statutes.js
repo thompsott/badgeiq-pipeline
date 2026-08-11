@@ -13,11 +13,29 @@ const NY_SENATE_API_KEY = process.env.NY_SENATE_API_KEY;
 // for the pilot — not exhaustive, just enough to prove the pattern works.
 // lawId "PEN" = Penal Law, "VAT" = Vehicle and Traffic Law.
 const TARGET_SECTIONS = [
+  // Criminal — Penal Law
   { lawId: "PEN", location: "155.25", category: "Criminal" }, // Petit Larceny
+  { lawId: "PEN", location: "155.30", category: "Criminal" }, // Grand Larceny 4th
   { lawId: "PEN", location: "140.20", category: "Criminal" }, // Burglary 3rd
+  { lawId: "PEN", location: "140.25", category: "Criminal" }, // Burglary 2nd
   { lawId: "PEN", location: "120.00", category: "Criminal" }, // Assault 3rd
+  { lawId: "PEN", location: "120.05", category: "Criminal" }, // Assault 2nd
+  { lawId: "PEN", location: "125.25", category: "Criminal" }, // Murder 2nd
+  { lawId: "PEN", location: "160.05", category: "Criminal" }, // Robbery 3rd
+  { lawId: "PEN", location: "220.03", category: "Criminal" }, // Criminal Possession of a Controlled Substance 7th
+  { lawId: "PEN", location: "265.01", category: "Criminal" }, // Criminal Possession of a Weapon 4th
+  { lawId: "PEN", location: "265.03", category: "Criminal" }, // Criminal Possession of a Weapon 2nd
+  { lawId: "PEN", location: "140.10", category: "Criminal" }, // Criminal Trespass 3rd
+
+  // Traffic — Vehicle and Traffic Law
   { lawId: "VAT", location: "1192", category: "Traffic" },    // DWI
   { lawId: "VAT", location: "1180", category: "Traffic" },    // Speeding
+  { lawId: "VAT", location: "1163", category: "Traffic" },    // Turning Movements
+  { lawId: "VAT", location: "1172", category: "Traffic" },    // Stop Signs, Yield Signs
+  { lawId: "VAT", location: "509", category: "Traffic" },     // Unlicensed Operation
+  { lawId: "VAT", location: "511", category: "Traffic" },     // Aggravated Unlicensed Operation
+  { lawId: "VAT", location: "600", category: "Traffic" },     // Leaving Scene of Accident
+  { lawId: "VAT", location: "1212", category: "Traffic" },    // Reckless Driving
 ];
 
 async function fetchSection({ lawId, location }) {
