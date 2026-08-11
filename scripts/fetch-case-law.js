@@ -20,13 +20,70 @@ function getDateDaysAgo(days) {
   return d.toISOString().split("T")[0];
 }
 
-// Maps a CourtListener court identifier to a plain display name your app
-// already knows how to color/categorize via getCourtStyle().
-function courtDisplayName(courtId, courtName) {
-  if (!courtId) return courtName || "Federal";
-  if (courtId === "scotus") return "U.S. Supreme";
-  if (courtId.startsWith("ca")) return `${courtId.toUpperCase()} Circuit`;
-  return courtName || courtId;
+// Maps CourtListener's court_id prefixes to the exact state names your app
+// uses (matching US_STATES in App.js). Covers each state's supreme court
+// and main courts of appeals — the most common sources for the kind of
+// case law this pipeline searches for. Anything unmapped (federal courts,
+// unusual court codes, etc.) correctly falls through to "Federal" rather
+// than guessing at a state — an unmapped result staying Federal is the
+// safe failure mode; a mis-mapped one showing under the wrong state isn't.
+const STATE_COURT_PREFIXES = {
+  ala: "Alabama", alacrimapp: "Alabama", alacivapp: "Alabama",
+  alaska: "Alaska", alaskactapp: "Alaska",
+  ariz: "Arizona", arizctapp: "Arizona",
+  ark: "Arkansas", arkctapp: "Arkansas",
+  cal: "California", calctapp: "California",
+  colo: "Colorado", coloctapp: "Colorado",
+  conn: "Connecticut", connctapp: "Connecticut", connsuperct: "Connecticut",
+  del: "Delaware", delsuperct: "Delaware",
+  fla: "Florida", fladistctapp: "Florida",
+  ga: "Georgia", gactapp: "Georgia",
+  haw: "Hawaii", hawapp: "Hawaii",
+  idaho: "Idaho", idahoctapp: "Idaho",
+  ill: "Illinois", illappct: "Illinois",
+  ind: "Indiana", indctapp: "Indiana",
+  iowa: "Iowa", iowactapp: "Iowa",
+  kan: "Kansas", kanctapp: "Kansas",
+  ky: "Kentucky", kyctapp: "Kentucky",
+  la: "Louisiana", lactapp: "Louisiana",
+  me: "Maine",
+  md: "Maryland", mdctspecapp: "Maryland",
+  mass: "Massachusetts", massappct: "Massachusetts",
+  mich: "Michigan", michctapp: "Michigan",
+  minn: "Minnesota", minnctapp: "Minnesota",
+  miss: "Mississippi", missctapp: "Mississippi",
+  mo: "Missouri", moctapp: "Missouri",
+  mont: "Montana",
+  neb: "Nebraska", nebctapp: "Nebraska",
+  nev: "Nevada",
+  nh: "New Hampshire",
+  nj: "New Jersey", njsuperctappdiv: "New Jersey",
+  nm: "New Mexico", nmctapp: "New Mexico",
+  ny: "New York", nyappdiv: "New York", nyappterm: "New York", nysupct: "New York",
+  nc: "North Carolina", ncctapp: "North Carolina",
+  nd: "North Dakota",
+  ohio: "Ohio", ohioctapp: "Ohio",
+  okla: "Oklahoma", oklacivapp: "Oklahoma", oklacrimapp: "Oklahoma",
+  or: "Oregon", orctapp: "Oregon",
+  pa: "Pennsylvania", pasuperct: "Pennsylvania", pacommwct: "Pennsylvania",
+  ri: "Rhode Island",
+  sc: "South Carolina", scctapp: "South Carolina",
+  sd: "South Dakota",
+  tenn: "Tennessee", tennctapp: "Tennessee", tenncrimapp: "Tennessee",
+  tex: "Texas", texapp: "Texas", texcrimapp: "Texas",
+  utah: "Utah", utahctapp: "Utah",
+  vt: "Vermont",
+  va: "Virginia", vactapp: "Virginia",
+  wash: "Washington", washctapp: "Washington",
+  wva: "West Virginia",
+  wis: "Wisconsin", wisctapp: "Wisconsin",
+  wyo: "Wyoming",
+};
+
+function resolveState(caseResult) {
+  const courtId = caseResult.court_id;
+  if (!courtId) return "Federal";
+  return STATE_COURT_PREFIXES[courtId] || "Federal";
 }
 
 async function fetchCaseLaw() {
@@ -80,7 +137,7 @@ function mapToUpdateRow(caseResult) {
 
   return {
     id,
-    state: "Federal",
+    state: resolveState(caseResult),
     type: "CASE RULING",
     title: caseResult.caseName || "Untitled Opinion",
     date: formattedDate,
