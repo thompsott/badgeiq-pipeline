@@ -147,22 +147,10 @@ function mapToUpdateRow(caseResult) {
       caseResult.procedural_history ||
       "New opinion — no summary text available from source."
     ).slice(0, 400),
-    impact:
-      // Facts (title, date, court, summary) are safe to auto-publish as-is.
-    // "What this means for you" is legal interpretation, not a fact — left
-    // honest and unfabricated here rather than auto-generated, so the
-    // content stays defensible for a buyer's legal review rather than
-    // quietly presenting invented guidance as reviewed advice.
     impact: "Not yet interpreted for field impact. Read the full opinion linked above for details.",
     action: "No agency-specific guidance yet — informational only.",
   };
 }
-
-async function upsertToSupabase(rows) {
-  if (rows.length === 0) {
-    console.log("No new case law found this run.");
-    return;
-  }
 
   // Inserting one row per request (instead of one batch request for all
   // rows) trades a bit of speed for reliability: a single command with
